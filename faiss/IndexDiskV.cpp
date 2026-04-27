@@ -36,6 +36,7 @@
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/impl/IDSelector.h>
 #include <faiss/impl/DiskIOProcessor.h>
+#include <faiss/impl/S3DiskIOProcessor.h>
 
 #include <faiss/impl/code_distance/code_distance.h>
 
@@ -985,27 +986,106 @@ namespace{
         faiss::Aligned_Invlist_Info *aligned_inv_info,
         faiss::ClusteredArrayInvertedLists* c_invlists)
     {
+        // ── S3/MinIO path — use range GETs ───────────────────────────────────
+        if (select_lists_path.rfind("s3://", 0) == 0) {
+            // Parse bucket/key
+            std::string rest = select_lists_path.substr(5);
+            auto slash = rest.find('/');
+            std::string bucket = rest.substr(0, slash);
+            std::string key    = rest.substr(slash + 1);
+
+            // Build S3 client
+            const char* endpoint = std::getenv("MINIO_ENDPOINT");
+            const char* region   = std::getenv("AWS_DEFAULT_REGION");
+            const char* key_id   = std::getenv("AWS_ACCESS_KEY_ID");
+            const char* secret   = std::getenv("AWS_SECRET_ACCESS_KEY");
+
+            Aws::Client::ClientConfiguration cfg;
+            cfg.region = region ? region : "us-east-2";
+            bool use_minio = (endpoint != nullptr);
+            if (use_minio) {
+                std::string ep(endpoint);
+                bool is_http = (ep.rfind("http://", 0) == 0);
+                if (ep.rfind("http://",  0) == 0) ep = ep.substr(7);
+                if (ep.rfind("https://", 0) == 0) ep = ep.substr(8);
+                cfg.endpointOverride = ep;
+                cfg.scheme = is_http ? Aws::Http::Scheme::HTTP
+                                     : Aws::Http::Scheme::HTTPS;
+            }
+
+            std::shared_ptr<Aws::S3::S3Client> s3;
+            if (key_id && secret) {
+                Aws::Auth::AWSCredentials creds(key_id, secret);
+                s3 = std::make_shared<Aws::S3::S3Client>(
+                    creds, cfg,
+                    Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
+                    !use_minio);
+            } else {
+                s3 = std::make_shared<Aws::S3::S3Client>(
+                    cfg,
+                    Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never,
+                    !use_minio);
+            }
+
+            for (size_t idx : sorted_idx) {
+                const faiss::Aligned_Invlist_Info& inv_info = aligned_inv_info[idx];
+                size_t ids_size   = inv_info.list_size * sizeof(faiss::idx_t);
+                size_t codes_size = inv_info.list_size * c_invlists->code_size;
+                size_t total_size = ids_size + codes_size;
+                if (total_size == 0) continue;
+
+                size_t data_offset = inv_info.page_start * PAGE_SIZE;
+
+                // Fetch ids + codes in one range GET
+                std::string range = "bytes=" + std::to_string(data_offset) +
+                                    "-" + std::to_string(data_offset + total_size - 1);
+
+                Aws::S3::Model::GetObjectRequest req;
+                req.SetBucket(bucket.c_str());
+                req.SetKey(key.c_str());
+                req.SetRange(range.c_str());
+
+                auto outcome = s3->GetObject(req);
+                if (!outcome.IsSuccess()) {
+                    throw std::runtime_error(
+                        "warm_invlist S3 GET failed: " +
+                        outcome.GetError().GetMessage());
+                }
+
+                c_invlists->ids[idx].resize(inv_info.list_size);
+                c_invlists->codes[idx].resize(codes_size);
+
+                auto result = outcome.GetResultWithOwnership();
+                auto& body  = result.GetBody();
+                body.read(reinterpret_cast<char*>(
+                    c_invlists->ids[idx].data()), ids_size);
+                body.read(reinterpret_cast<char*>(
+                    c_invlists->codes[idx].data()), codes_size);
+            }
+            return;
+        }
+
+        // ── Local file path — original implementation ─────────────────────────
         std::ifstream in_file(select_lists_path, std::ios::binary);
         if (!in_file.is_open()) {
             throw std::runtime_error("Failed to open file: " + select_lists_path);
         }
 
         for (size_t idx : sorted_idx) {
-            // Get cluster info
             const faiss::Aligned_Invlist_Info& inv_info = aligned_inv_info[idx];
-
-            size_t ids_size = inv_info.list_size * sizeof(faiss::idx_t);
+            size_t ids_size   = inv_info.list_size * sizeof(faiss::idx_t);
             size_t codes_size = inv_info.list_size * c_invlists->code_size;
 
             c_invlists->ids[idx].resize(inv_info.list_size);
             c_invlists->codes[idx].resize(codes_size);
+
             size_t data_offset = inv_info.page_start * PAGE_SIZE;
             in_file.seekg(data_offset, std::ios::beg);
-
-            in_file.read(reinterpret_cast<char*>(c_invlists->ids[idx].data()), ids_size);
-            in_file.read(reinterpret_cast<char*>(c_invlists->codes[idx].data()), codes_size);
+            in_file.read(reinterpret_cast<char*>(
+                c_invlists->ids[idx].data()), ids_size);
+            in_file.read(reinterpret_cast<char*>(
+                c_invlists->codes[idx].data()), codes_size);
         }
-
     }
 }
 
@@ -1251,9 +1331,14 @@ void IndexDiskV::search(
             }
         }
         IndexIVFStats local_stats;
+	std::cout << "Starting query: " << i0 << std::endl;
         sub_search_func(n_slice, x_i, dis_i, lab_i, &local_stats);
     }
-
+    std::cout << "[CHECK] First 5 raw results:\n";
+    for (int ii = 0; ii < 5; ii++) {
+        std::cout << "  [" << ii << "] ID=" << labels[ii] 
+                  << " Dist=" << distances[ii] << "\n";
+    }
     if(this->vector_cache_setting_mode || this->vector_cache_dp_setting_mode){
         return;
     }
@@ -1283,6 +1368,11 @@ void IndexDiskV::search(
 
             }
         }
+    }
+    std::cout << "[CHECK] First 5 output results:\n";
+    for (int ii = 0; ii < 5; ii++) {
+        std::cout << "  [" << ii << "] ID=" << labels_result[ii]
+                  << " Dist=" << distances_result[ii] << "\n";
     }
     auto time_end = std::chrono::high_resolution_clock::now(); 
     indexDiskV_stats.rerank_elapsed += time_end - time_start;
@@ -1987,7 +2077,6 @@ namespace{
     {
         if(query)
             pqdecoder->set_query(query);
-
         for (size_t i = 0; i < probe_batch; i++) {
             //std::cout << " Decoding list: " << (pqed_list + i) << std::endl;
             idx_t list_no = list_ids[pqed_list + i];
@@ -2004,7 +2093,7 @@ namespace{
                     continue;
             }
 #endif
-            pqdecoder->set_list(list_no, list_distance);
+	    pqdecoder->set_list(list_no, list_distance);
             pqdecoder->scan_codes(list_size,
                                 invlists->get_codes(list_no),
                                 invlists->get_ids(list_no),
@@ -3182,7 +3271,7 @@ void IndexDiskV::search_o(
                         current_pqed_list += pq_todo;
                         indexDiskV_stats.pq_list_partial+=pq_todo;
                         pq_done += pq_todo;
-                        //std::cout << "thread:" << thread_id <<"PQ decode finished\n";
+                        // std::cout << "thread:" << thread_id <<"PQ decode finished\n";
                     }
                     auto time_end = std::chrono::high_resolution_clock::now();
                     indexDiskV_stats.pq_elapsed+=time_end - time_start;
@@ -3591,6 +3680,7 @@ void IndexDiskV::search_preassigned(
 
 #ifdef CACHE_MODE
     UncachedLists ul;
+    std::cout << "Searching with Cache\n";
     search_o(n, x, k, nprobe, keys, coarse_dis, distances, labels, local_processor, rh, ul);
     if(!vector_cache_setting_mode){
         search_uncached(n, x, k, nprobe, keys, coarse_dis, distances, labels, local_processor, rh, ul);
@@ -3618,7 +3708,10 @@ namespace{
     #ifndef USING_ASYNC
         return new IVF_DiskIOSearchProcessor<ValueType>(disk_path, d);
     #else
-        return new IVF_DiskIOSearchProcessor_Async_PQ<ValueType>(disk_path, d);
+    	if (disk_path.rfind("s3://", 0) == 0)
+            return new IVF_S3DiskIOSearchProcessor<ValueType>(disk_path, d);
+        else
+            return new IVF_DiskIOSearchProcessor_Async_PQ<ValueType>(disk_path, d);
     #endif
     }
 }
@@ -3656,4 +3749,6 @@ IndexDiskVStats indexDiskV_stats;
 void IndexDiskVStats::reset() {
     memset(this, 0, sizeof(*this));
 }
+S3IOStats s3_io_stats;
 }
+

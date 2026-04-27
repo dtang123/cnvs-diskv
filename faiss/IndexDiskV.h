@@ -9,13 +9,14 @@
 #include <faiss/utils/AlignedTable.h>
 #include <faiss/impl/DiskInvertedListHolder.h>
 #include <faiss/impl/DiskIOProcessor.h>
+#include <faiss/impl/S3IOStats.h>
 
 #include <string>
 #include <fstream>   
 
 #include <chrono>
 
-#define CACHE_MODE
+// #define CACHE_MODE
 
 namespace faiss {
 
@@ -557,6 +558,8 @@ struct IndexDiskVStats {
 // global var that collects them all
 FAISS_API extern IndexDiskVStats indexDiskV_stats;
 
+
+extern S3IOStats s3_io_stats;
 }
 
 #endif

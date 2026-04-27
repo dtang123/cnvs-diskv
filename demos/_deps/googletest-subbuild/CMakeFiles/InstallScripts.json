@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/tang627/DiskV_VLDB26/demos/_deps/googletest-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

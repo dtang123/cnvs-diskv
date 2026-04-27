@@ -1,0 +1,5 @@
+if(EXISTS "/home/tang627/DiskV_VLDB26/demos/tests/faiss_test[1]_tests.cmake")
+  include("/home/tang627/DiskV_VLDB26/demos/tests/faiss_test[1]_tests.cmake")
+else()
+  add_test(faiss_test_NOT_BUILT faiss_test_NOT_BUILT)
+endif()

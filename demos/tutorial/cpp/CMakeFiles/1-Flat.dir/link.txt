@@ -1,0 +1,1 @@
+/usr/bin/c++ "CMakeFiles/1-Flat.dir/1-Flat.cpp.o" -o 1-Flat  ../../faiss/libfaiss_avx2.a /usr/lib/x86_64-linux-gnu/libmkl_intel_lp64.so /usr/lib/x86_64-linux-gnu/libmkl_sequential.so /usr/lib/x86_64-linux-gnu/libmkl_core.so -lm -ldl /usr/lib/gcc/x86_64-linux-gnu/11/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a

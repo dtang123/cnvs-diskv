@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/demo_residual_quantizer.dir/demo_residual_quantizer.cpp.o -o demo_residual_quantizer  ../faiss/libfaiss.a /usr/lib/gcc/x86_64-linux-gnu/11/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a /usr/lib/x86_64-linux-gnu/libmkl_intel_lp64.so /usr/lib/x86_64-linux-gnu/libmkl_sequential.so /usr/lib/x86_64-linux-gnu/libmkl_core.so -lm -ldl

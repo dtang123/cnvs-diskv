@@ -391,6 +391,8 @@ endif()
 
 find_package(OpenMP REQUIRED)
 target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
+target_include_directories(faiss PRIVATE /home/tang627/awssdk/include)
+target_link_libraries(faiss PRIVATE ${AWS_CORE_LIB} ${AWS_S3_LIB})
 target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_avx512 PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_avx512_spr PRIVATE OpenMP::OpenMP_CXX)
