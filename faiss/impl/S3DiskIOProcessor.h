@@ -15,6 +15,12 @@ struct IVF_S3DiskIOSearchProcessor : DiskIOProcessor {
     AsyncReadRequests_Partial_PQDecode* partial_diskRequests;
     AsyncReadRequests_Full_PQDecode*    full_diskRequests;
     AsyncRequests_IndexInfo*            info_diskRequests;
+    
+    faiss::InvertedLists* invlists = nullptr;
+
+    void set_invlists(faiss::InvertedLists* il) {
+        this->invlists = il;
+    }
 
     IVF_S3DiskIOSearchProcessor(std::string disk_path, size_t d)
         : DiskIOProcessor(disk_path, d) {
@@ -82,7 +88,7 @@ struct IVF_S3DiskIOSearchProcessor : DiskIOProcessor {
         //req.SetKey(s3_key_.c_str());
         req.SetRange(range.c_str());
 
-	printf("[S3DiskIOProcessor] Expected size: %ld bytes\n", size);
+	// printf("[S3DiskIOProcessor] Expected size: %ld bytes\n", size);
         auto outcome = s3_client_->GetObject(req);
         if (!outcome.IsSuccess()) {
             std::cerr << "[S3IO] GET failed range=" << range
@@ -96,7 +102,9 @@ struct IVF_S3DiskIOSearchProcessor : DiskIOProcessor {
         auto result = outcome.GetResultWithOwnership();
         auto& body  = result.GetBody();
         body.read(static_cast<char*>(buf), static_cast<std::streamsize>(size));
-        uint64_t got = static_cast<uint64_t>(body.gcount());
+        //printf("[DEBUG] First 4 bytes from S3: %02x %02x %02x %02x\n", 
+           // ((uint8_t*)buf)[0], ((uint8_t*)buf)[1], ((uint8_t*)buf)[2], ((uint8_t*)buf)[3]);
+	uint64_t got = static_cast<uint64_t>(body.gcount());
 	if (got > size) {
             std::cerr << "[S3IO] OVERFLOW: requested=" << size 
                       << " got=" << got << " offset=" << offset << "\n";
@@ -190,7 +198,7 @@ struct IVF_S3DiskIOSearchProcessor : DiskIOProcessor {
         // Wait for all parallel GETs
         for (int i = 0; i < num; i++) futures[i].get();
     
-        // cal_callbacks after all IO done
+	// cal_callbacks after all IO done
         for (int i = 0; i < n; i++) {
             AsyncRequest_Full_Batch* req =
                 full_diskRequests->list_requests.data() + i;
@@ -198,8 +206,8 @@ struct IVF_S3DiskIOSearchProcessor : DiskIOProcessor {
             for (int j = 0; j < req->list_num; j++)
                 full_diskRequests->cal_callback(single + j, single[j].m_buffer);
         }
-    
-        full_diskRequests->dp_callback();
+
+	full_diskRequests->dp_callback();
         // NOTE: pq_callback NOT called here — search_o calls it before submit()
     }
 

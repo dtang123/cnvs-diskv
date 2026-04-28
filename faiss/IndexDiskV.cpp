@@ -1041,9 +1041,11 @@ namespace{
                                     "-" + std::to_string(data_offset + total_size - 1);
 
                 Aws::S3::Model::GetObjectRequest req;
-                req.SetBucket(bucket.c_str());
-                req.SetKey(key.c_str());
-                req.SetRange(range.c_str());
+                // req.SetBucket(bucket.c_str());
+                req.SetBucket("warehouse");
+		// req.SetKey(key.c_str());
+                req.SetKey("diskv/gist1m_0.clustered");
+		req.SetRange(range.c_str());
 
                 auto outcome = s3->GetObject(req);
                 if (!outcome.IsSuccess()) {
@@ -1059,7 +1061,7 @@ namespace{
                 auto& body  = result.GetBody();
                 body.read(reinterpret_cast<char*>(
                     c_invlists->ids[idx].data()), ids_size);
-                body.read(reinterpret_cast<char*>(
+		body.read(reinterpret_cast<char*>(
                     c_invlists->codes[idx].data()), codes_size);
             }
             return;
@@ -1067,7 +1069,8 @@ namespace{
 
         // ── Local file path — original implementation ─────────────────────────
         std::ifstream in_file(select_lists_path, std::ios::binary);
-        if (!in_file.is_open()) {
+	std::cerr << "[warming up invlist] file: " << select_lists_path;
+	if (!in_file.is_open()) {
             throw std::runtime_error("Failed to open file: " + select_lists_path);
         }
 
@@ -1083,7 +1086,11 @@ namespace{
             in_file.seekg(data_offset, std::ios::beg);
             in_file.read(reinterpret_cast<char*>(
                 c_invlists->ids[idx].data()), ids_size);
-            in_file.read(reinterpret_cast<char*>(
+            //std::cerr << "[warm_invlist S3] list=" << idx 
+            //      << " offset=" << data_offset
+            //      << " ids_size=" << ids_size
+            //      << " first_id=" << c_invlists->ids[idx][0] << "\n";
+	    in_file.read(reinterpret_cast<char*>(
                 c_invlists->codes[idx].data()), codes_size);
         }
     }
@@ -2431,6 +2438,7 @@ void IndexDiskV::search_o(
         if (n == 0) {
             return;
         }
+	diskIOprocessor->set_invlists(invlists);
         size_t i0 = 0;
         int thread_id = omp_get_thread_num();
         if(use_search_threshold){    
@@ -2763,7 +2771,10 @@ void IndexDiskV::search_o(
                     idx_t list_no = (keys + cur_q*nprobe)[current_dped_list + dpi];
                     size_t list_size = invlists->list_size(list_no);
                     const idx_t* dp_ids = invlists->get_ids(list_no);
-                    size_t dp_count = 0;
+		    if (dp_ids[0] == 0 || dp_ids[0] > 1000000) { 
+                        printf("[DP_CALLBACK] CRITICAL: Callback seeing invalid ID %ld at list %ld\n", dp_ids[0], list_no);
+                    }
+		    size_t dp_count = 0;
                     if(!dp_increment){
                         dedp(list_size, id_dis_map, dp_ids, duplicate_indicators, current_dped_list, dpi, dp_count);
                     }else{
@@ -3287,7 +3298,10 @@ void IndexDiskV::search_o(
                         idx_t list_no = (keys + cur_q*nprobe)[current_dped_list + dpi];
                         size_t list_size = invlists->list_size(list_no);
                         const idx_t* dp_ids = invlists->get_ids(list_no);
-                        size_t dp_count = 0;
+			if (dp_ids[0] == 0 || dp_ids[0] > 1000000) {
+                            printf("[DP_CALLBACK] CRITICAL: Callback seeing invalid ID %ld at list %ld\n", dp_ids[0], list_no);
+                        } 
+			size_t dp_count = 0;
                         if(!dp_increment){
                             dedp(list_size, id_dis_map, dp_ids, duplicate_indicators, current_dped_list, dpi, dp_count);
                         }
@@ -3708,10 +3722,12 @@ namespace{
     #ifndef USING_ASYNC
         return new IVF_DiskIOSearchProcessor<ValueType>(disk_path, d);
     #else
-    	if (disk_path.rfind("s3://", 0) == 0)
-            return new IVF_S3DiskIOSearchProcessor<ValueType>(disk_path, d);
-        else
+    	if (disk_path.rfind("s3://", 0) == 0) {
+            auto processor = new faiss::IVF_S3DiskIOSearchProcessor<float>(disk_path, d);
+            return processor;
+	} else {
             return new IVF_DiskIOSearchProcessor_Async_PQ<ValueType>(disk_path, d);
+        }
     #endif
     }
 }

@@ -112,7 +112,8 @@ struct DiskIOProcessor{
     faiss::MetricType metric_type = METRIC_L2;
 
     bool verbose = true;
-
+    
+    faiss::InvertedLists* invlists = nullptr;
     DiskIOProcessor(std::string disk_path, size_t d, size_t total_page = 0): disk_path(disk_path), d(d), total_page(total_page){
     }
 
@@ -273,6 +274,9 @@ struct DiskIOProcessor{
         return 0;
     }
     
+    void set_invlists(faiss::InvertedLists* il) {
+        this->invlists = il;
+    }
 };
 
 
@@ -1631,6 +1635,7 @@ struct IVF_DiskIOSearchProcessor_Async_PQ : DiskIOProcessor{
             }
         }
     }
+
 };
 
 } // namespace faiss

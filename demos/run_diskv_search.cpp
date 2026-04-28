@@ -289,9 +289,18 @@ int main(int argc, char** argv)
     for (int i = 0; i < partitions; i++) {
         printf("Warming up partition %d...\n", i);
 	std::string original_disk_path = indices[i]->disk_path;
-        indices[i]->disk_path = config["search_index_meta_path"] + "_" + std::to_string(i) + ".index";
-	indices[i]->warmUpListCache(1000, xq, 200, 0);
-        indices[i]->warmUpAllIndexMetadata();
+        std::cout << "  disk_path=" << indices[i]->disk_path << "\n";
+    
+        bool is_s3 = (indices[i]->disk_path.rfind("s3://", 0) == 0);
+        
+        // Skip warmUpListCache for S3 (opens disk_path with ifstream)
+        if (!is_s3) {
+            indices[i]->warmUpListCache(1000, xq, 200, 0);
+        }
+ //	indices[i]->disk_path = config["search_index_meta_path"] + "_" + std::to_string(i) + ".index";
+//	indices[i]->warmUpListCache(1000, xq, 200, 0);
+   //     indices[i]->disk_path = config["search_index_meta_path"] + "_" + std::to_string(i) + ".clustered";
+	indices[i]->warmUpAllIndexMetadata();
 	indices[i]->disk_path = original_disk_path;
         indices[i]->initializeDiskIO(search_threads);
 
