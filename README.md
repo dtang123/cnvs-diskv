@@ -70,11 +70,11 @@ submit_per_round=5
 
 verbose=1
 ```
-###Build command
+### Build command
 ```
 ./build/demos/demo_script 0 ./demos/dataset_gist1m.sh
 ```
-## Index Search Setup
+## Index Search Setup Script
 ```
 #!/bin/bash
 # setup_diskv_minio.sh
