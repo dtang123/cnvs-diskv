@@ -47,8 +47,8 @@ struct IVF_S3DiskIOSearchProcessor : DiskIOProcessor {
         const char* secret   = std::getenv("AWS_SECRET_ACCESS_KEY");
 
         Aws::Client::ClientConfiguration cfg;
-        cfg.maxConnections = 50;
-	cfg.connectTimeoutMs = 3000;
+        cfg.maxConnections = 500;
+	cfg.connectTimeoutMs = 30000;
 	cfg.region = region ? region : "us-east-2";
 
         bool use_minio = (endpoint != nullptr);

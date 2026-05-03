@@ -1,4 +1,12 @@
-
+## Index Search Setup Script
+Make executable
+```
+mkdir -p build
+cd build
+cmake -DAWSSDK_ROOT=/path/to/awssdk ..
+make demo_script
+make run_diskv_search
+```
 ## Build and search file for Gist1M (dataset_gist1m.sh)
 ```
 # Data files
@@ -64,21 +72,15 @@ verbose=1
 ```
 ### Build command
 ```
-./build/demos/demo_script 0 ./demos/dataset_gist1m.sh
+./build/demos/demo_script 0 /path/to/dataset_gist1m.sh
 ```
 ### Move to Minio
-Again assuming minio setup is the same as my SPANN repo
+Again assuming minio setup is the same as my SPANN repo 
 ```
 ~/mc cp /path/to/gist1m_0.clustered minio/warehouse/diskv
 ```
+I assume traffic control is applied
 ## Index Search Setup Script
-Make executable
-```
-mkdir -p build
-cd build
-cmake -DAWSSDK_ROOT=/path/to/awssdk ..
-make run_diskv_search
-```
 Copy files to ramdisk and check minio is working
 ```
 #!/bin/bash
