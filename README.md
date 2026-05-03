@@ -8,7 +8,7 @@ In this work, we present DiskV, the first disk-based vector index designed to ac
 ---
 
 
-## Build and search file for Gist1M
+## Build and search file for Gist1M (dataset_gist1m.sh)
 ```
 # Data files
 base_filepath=/hdd_root/tang627/GIST1M/gist_base.bin
