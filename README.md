@@ -1,12 +1,3 @@
-# DiskV
-
-
-Vector databases have attracted significant attention with the rapid adoption of large language models (LLMs). To improve the cost efficiency of vector search, several disk-based vector indexes, such as SPANN and DiskANN, have been proposed. However, these designs are mainly optimized for high-end, ultra-fast SSDs (e.g., NVMe and Optane) and exhibit poor performance on commodity storage devices, such as HDDs, cloud block storage, and low-end SSDs (e.g., SATA SSDs), which are widely used in practice due to cost and capacity considerations.
-
-In this work, we present DiskV, the first disk-based vector index designed to achieve high search performance on commodity storage. The basic idea of DiskV builds upon a clustering-based indexing structure that partitions the dataset into large buckets, leveraging sequential access patterns to favor commodity storage. To improve performance, DiskV introduces a suite of novel optimizations, including **query-aware adaptive search**, **segment-based pruning**, and an **optimized asynchronous I/O**. Extensive experiments on billion-scale datasets show that DiskV substantially outperforms existing disk-based indexes on commodity storage (by up to **19X**). We also integrate DiskV into PostgreSQL, which demonstrates its practicality in a real database system. Overall, DiskV provides a more **practical and cost-efficient foundation** for supporting large-scale AI applications.
-
----
-
 
 ## Build and search file for Gist1M (dataset_gist1m.sh)
 ```
@@ -28,9 +19,10 @@ nq=1000
 ratio=10
 
 # Partitions and paths
+# do not change characters after last slash or rename index files
 partitions=1
-build_disk_store_path=/home/tang627/DiskV_index/gist1m
-build_centroid_index_path=/home/tang627/DiskV_index/gist1m_centroid
+build_disk_store_path=/path/to/DiskV_index/gist1m
+build_centroid_index_path=/path/to/DiskV_index/gist1m_centroid
 search_disk_store_path=s3://minio/warehouse/diskv/gist1m
 search_centroid_index_path=/dev/shm/diskv_metadata/gist1m_centroid
 search_index_meta_path=/dev/shm/diskv_metadata/gist1m
@@ -74,6 +66,11 @@ verbose=1
 ```
 ./build/demos/demo_script 0 ./demos/dataset_gist1m.sh
 ```
+### Move to Minio
+```
+~/mc cp /path/to/gist1m_0.clustered minio/warehouse/diskv
+```
+gist1m_0.clustered
 ## Index Search Setup Script
 ```
 #!/bin/bash
@@ -148,7 +145,20 @@ echo "  \${DISKV_BIN} \${DISKV_CONFIG_FILE}"
 echo ""
 echo "Note: Ensure \${DISKV_CONFIG_FILE} has correct paths for S3 and metadata."
 ```
-## Installation
+Run
+```
+\${DISKV_BIN} \${DISKV_CONFIG_FILE}
+```
+
+# DiskV (Here on out is not my work)
+
+
+Vector databases have attracted significant attention with the rapid adoption of large language models (LLMs). To improve the cost efficiency of vector search, several disk-based vector indexes, such as SPANN and DiskANN, have been proposed. However, these designs are mainly optimized for high-end, ultra-fast SSDs (e.g., NVMe and Optane) and exhibit poor performance on commodity storage devices, such as HDDs, cloud block storage, and low-end SSDs (e.g., SATA SSDs), which are widely used in practice due to cost and capacity considerations.
+
+In this work, we present DiskV, the first disk-based vector index designed to achieve high search performance on commodity storage. The basic idea of DiskV builds upon a clustering-based indexing structure that partitions the dataset into large buckets, leveraging sequential access patterns to favor commodity storage. To improve performance, DiskV introduces a suite of novel optimizations, including **query-aware adaptive search**, **segment-based pruning**, and an **optimized asynchronous I/O**. Extensive experiments on billion-scale datasets show that DiskV substantially outperforms existing disk-based indexes on commodity storage (by up to **19X**). We also integrate DiskV into PostgreSQL, which demonstrates its practicality in a real database system. Overall, DiskV provides a more **practical and cost-efficient foundation** for supporting large-scale AI applications.
+
+---
+## Installation 
 
 ### Dependencies
 
