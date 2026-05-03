@@ -74,8 +74,9 @@ Again assuming minio setup is the same as my SPANN repo
 ## Index Search Setup Script
 Make executable
 ```
+mkdir -p build
 cd build
-cmake .. # if needed
+cmake ..
 make run_diskv_search
 ```
 Copy files to ramdisk and check minio is working
