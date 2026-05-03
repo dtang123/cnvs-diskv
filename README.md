@@ -1,4 +1,5 @@
-# Step 1:Make executable
+# Step 1: Make executable
+I assume you have awssdk already installed. Link awssdk path using cmake
 ```
 mkdir -p build
 cd build
