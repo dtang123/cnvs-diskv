@@ -73,6 +73,10 @@ Again assuming minio setup is the same as my SPANN repo
 ```
 gist1m_0.clustered
 ## Index Search Setup Script
+Make executable
+```
+make run_diskv_search
+```
 Copy files to ramdisk and check minio is working
 ```
 #!/bin/bash
