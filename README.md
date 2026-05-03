@@ -71,11 +71,11 @@ Again assuming minio setup is the same as my SPANN repo
 ```
 ~/mc cp /path/to/gist1m_0.clustered minio/warehouse/diskv
 ```
-gist1m_0.clustered
 ## Index Search Setup Script
 Make executable
 ```
 cd build
+cmake .. # if needed
 make run_diskv_search
 ```
 Copy files to ramdisk and check minio is working
