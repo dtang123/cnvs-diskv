@@ -67,11 +67,18 @@ verbose=1
 ./build/demos/demo_script 0 ./demos/dataset_gist1m.sh
 ```
 ### Move to Minio
+Again assuming minio setup is the same as my SPANN repo
 ```
 ~/mc cp /path/to/gist1m_0.clustered minio/warehouse/diskv
 ```
-gist1m_0.clustered
 ## Index Search Setup Script
+Make executable
+```
+cd build
+cmake .. # if needed
+make run_diskv_search
+```
+Copy files to ramdisk and check minio is working
 ```
 #!/bin/bash
 # setup_diskv_minio.sh
