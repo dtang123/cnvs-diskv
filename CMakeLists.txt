@@ -91,11 +91,11 @@ if(FAISS_ENABLE_CUVS AND NOT TARGET cuvs::cuvs)
  endif()
 
 # AWS SDK for S3 support in DiskIOProcessor
-set(AWSSDK_ROOT /home/tang627/awssdk)
-include_directories(${AWSSDK_ROOT}/include)
-link_directories(${AWSSDK_ROOT}/lib)
-find_library(AWS_CORE_LIB aws-cpp-sdk-core HINTS ${AWSSDK_ROOT}/lib)
-find_library(AWS_S3_LIB   aws-cpp-sdk-s3   HINTS ${AWSSDK_ROOT}/lib)
+# Pass -DAWSSDK_ROOT=/path/to/awssdk or -DCMAKE_PREFIX_PATH=/path/to/awssdk at cmake time
+if(AWSSDK_ROOT)
+    list(PREPEND CMAKE_PREFIX_PATH "${AWSSDK_ROOT}")
+endif()
+find_package(AWSSDK REQUIRED COMPONENTS core s3)
 add_subdirectory(faiss)
 
 if(FAISS_ENABLE_GPU)

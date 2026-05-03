@@ -31,15 +31,10 @@ target_link_libraries(demo_script PRIVATE faiss OpenMP::OpenMP_CXX)
 add_executable(demo_script_hybrid EXCLUDE_FROM_ALL demo_script_hybrid.cpp)
 target_link_libraries(demo_script_hybrid PRIVATE faiss OpenMP::OpenMP_CXX)
 
-# AWS SDK for S3 support
-find_library(AWS_CORE_LIB aws-cpp-sdk-core HINTS /home/tang627/awssdk/lib)
-find_library(AWS_S3_LIB   aws-cpp-sdk-s3   HINTS /home/tang627/awssdk/lib)
-
+# AWS SDK for S3 support — already found in parent CMakeLists.txt via find_package(AWSSDK)
 add_executable(run_diskv_search EXCLUDE_FROM_ALL run_diskv_search.cpp)
-target_include_directories(run_diskv_search PRIVATE /home/tang627/awssdk/include)
 target_link_libraries(run_diskv_search PRIVATE
     faiss
     OpenMP::OpenMP_CXX
-    ${AWS_CORE_LIB}
-    ${AWS_S3_LIB}
+    ${AWSSDK_LINK_LIBRARIES}
 )

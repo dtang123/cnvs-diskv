@@ -2,9 +2,9 @@
 ## Build and search file for Gist1M (dataset_gist1m.sh)
 ```
 # Data files
-base_filepath=/hdd_root/tang627/GIST1M/gist_base.bin
-query_filepath=/hdd_root/tang627/GIST1M/gist_query.bin
-ground_truth_filepath=/hdd_root/tang627/GIST1M/gist_groundtruth.bin
+base_filepath=/path/to/gist_base.bin
+query_filepath=/path/to/gist_query.bin
+ground_truth_filepath=/path/to/gist_groundtruth.bin
 
 # Data formats / types
 dataset_fmt=fbin
@@ -76,7 +76,7 @@ Make executable
 ```
 mkdir -p build
 cd build
-cmake ..
+cmake -DAWSSDK_ROOT=/path/to/awssdk ..
 make run_diskv_search
 ```
 Copy files to ramdisk and check minio is working
@@ -101,14 +101,14 @@ export DISKV_CLUSTERED_PATH=s3://warehouse/diskv/gist1m_0.clustered
 export DISKV_CENTROID_PATH=/dev/shm/diskv_metadata/gist1m_centroid_0
 
 # ── Query / ground truth ──────────────────────────────────────────────────────
-export DISKV_QUERY_FILE=/hdd_root/tang627/GIST1M/gist_query.bin
-export DISKV_GT_FILE=/hdd_root/tang627/GIST1M/gist_groundtruth.bin
+export DISKV_QUERY_FILE=/path/to/gist_query.bin
+export DISKV_GT_FILE=/path/to/gist_groundtruth.bin
 
 # ── Search binary ─────────────────────────────────────────────────────────────
 export DISKV_BIN=~/DiskV_VLDB26/build/demos/run_diskv_search
 
 # ── Runtime linker path for AWS SDK ──────────────────────────────────────────
-export LD_LIBRARY_PATH=/home/tang627/awssdk/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/path/to/awssdk/lib:$LD_LIBRARY_PATH
 
 # ── RAM disk setup ────────────────────────────────────────────────────────────
 echo "Setting up RAM disk metadata..."
