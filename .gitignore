@@ -7,7 +7,8 @@
 *.dylib
 *.pyc
 *~
-/build/*/
+/build/
+/build/CMakeCache.txt
 /config.*
 /aclocal.m4
 /autom4te.cache/
